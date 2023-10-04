@@ -1,4 +1,4 @@
-module changeme
+module github.com/vyPal/VFMP/gui
 
 go 1.18
 
