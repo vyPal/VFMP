@@ -1,0 +1,11 @@
+2023/10/20 20:43:06 User config directory:/root/.config
+2023/10/20 20:43:06 Config file:/root/.config/vfmp/config.yaml
+2023/10/20 20:43:06 - - - - - - - - - - - - - - -
+2023/10/20 20:43:06 daemon started
+2023/10/20 20:43:06 Strat IPC server...
+2023/10/20 20:50:34 User config directory:/root/.config
+2023/10/20 20:50:34 Config file:/root/.config/vfmp/config.yaml
+2023/10/20 20:50:34 - - - - - - - - - - - - - - -
+2023/10/20 20:50:34 daemon started
+2023/10/20 20:50:34 Strat IPC server...
+listen unix /tmp/vfmp.sock: bind: no such file or directory
