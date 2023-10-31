@@ -21,7 +21,8 @@ import (
 
 type ConfigDatabase struct {
 	Data struct {
-		Dir string `yaml:"dir" default:"/var/lib/vfmp"`
+		Dir     string `yaml:"dir" default:"/var/lib/vfmp"`
+		RootDir string `yaml:"root_dir" default:"/home/vypal/Dokumenty/GitHub/VFMP"`
 	} `yaml:"data"`
 	Server struct {
 		Port int `yaml:"port" default:"32768"`
@@ -189,7 +190,6 @@ func main() {
 			// If the process is running, ask if the user would like to kill it
 			if YesNoPrompt("vfmpd is already running, would you like to kill it?", false) {
 				tryKillDaemon(cfg.Server.Port)
-				return
 			} else {
 				return
 			}
@@ -218,7 +218,7 @@ func main() {
 	log.Print("- - - - - - - - - - - - - - -")
 	log.Print("daemon started")
 
-	setupIPCServer(cfg.Server.Port)
+	setupIPCServer(&cfg)
 }
 
 func tryKillDaemon(port int) {
@@ -265,14 +265,14 @@ func tryKillDaemon(port int) {
 	}
 }
 
-func setupIPCServer(port int) {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+func setupIPCServer(cfg *ConfigDatabase) {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
 		log.Fatal("Unable to listen: ", err)
 	}
 	defer listener.Close()
 
-	log.Printf("IPC server listening on port %d", port)
+	log.Printf("IPC server listening on port %d", cfg.Server.Port)
 
 	for {
 		conn, err := listener.Accept()
@@ -281,7 +281,7 @@ func setupIPCServer(port int) {
 			continue
 		}
 
-		go handleConnection(conn)
+		go handleConnection(conn, cfg)
 	}
 }
 
@@ -369,7 +369,7 @@ func updateConfigFile(configFile string, cfg *ConfigDatabase) error {
 	return nil
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, cfg *ConfigDatabase) {
 	defer conn.Close()
 
 	log.Print("New connection established")
@@ -399,9 +399,7 @@ func handleConnection(conn net.Conn) {
 
 			os.Exit(0)
 			return
-		}
-
-		if data["type"] == "ping" {
+		} else if data["type"] == "ping" {
 			log.Print("Received ping message")
 
 			// Send pong message
@@ -420,6 +418,8 @@ func handleConnection(conn net.Conn) {
 				log.Print("Error writing pong message: ", err)
 				return
 			}
+		} else {
+			processMessage(msg, conn, cfg)
 		}
 	}
 }

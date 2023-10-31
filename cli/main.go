@@ -21,9 +21,26 @@ type ConfigDatabase struct {
 	}
 }
 
-type Message struct {
+type IPCMessage struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
+}
+
+type CountRequest struct {
+	Dir        string  `json:"dir"`
+	UpdateFreq float32 `json:"ufreq" default:"10"`
+}
+
+type IndexRequest struct {
+	Dir        string  `json:"dir"`
+	UpdateFreq float32 `json:"ufreq" default:"10"`
+}
+
+type SearchRequest struct {
+	Dir          string `json:"dir"`
+	SearchString string `json:"search"`
+	FuzzySearch  bool   `json:"fuzzy" default:"false"`
+	MinScore     int    `json:"score" default:"0"`
 }
 
 func main() {
@@ -56,11 +73,21 @@ func main() {
 	defer conn.Close()
 
 	// Set a timeout for the connection
-	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	conn.SetDeadline(time.Now().Add(15 * time.Second))
 
-	message := Message{
-		Type: "ping",
-		Data: "",
+	request := IndexRequest{
+		Dir: "/home/vypal/Dokumenty",
+	}
+
+	jsonRequest, err := json.Marshal(request)
+	if err != nil {
+		fmt.Printf("Failed to marshal request: %v\n", err)
+		return
+	}
+
+	message := IPCMessage{
+		Type: "index",
+		Data: string(jsonRequest),
 	}
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
@@ -75,14 +102,17 @@ func main() {
 		return
 	}
 
-	// Receive a response from the server
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Printf("Failed to receive response from server: %v\n", err)
-		return
-	}
+	// Read responses from the server forever
+	for {
+		// Read the response from the server
+		buf := make([]byte, 1024)
+		n, err := conn.Read(buf)
+		if err != nil {
+			fmt.Printf("Failed to read response from server: %v\n", err)
+			return
+		}
 
-	response := string(buffer[:n])
-	fmt.Printf("Received response from server: %s\n", response)
+		// Print the response from the server
+		fmt.Printf("Response from server: %s\n", buf[:n])
+	}
 }
