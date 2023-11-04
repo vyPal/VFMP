@@ -187,7 +187,7 @@ func ProcessConfig(configFile string, cfg *ConfigDatabase) {
 			log.Fatal("Unable to update config file:", err)
 		}
 
-		err = cleanenv.ReadConfig(configFile, &cfg)
+		err = cleanenv.ReadConfig(configFile, cfg)
 		if err != nil {
 			log.Fatal("Unable to read config:", err)
 		}
