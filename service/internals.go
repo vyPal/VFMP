@@ -50,8 +50,10 @@ func walkFiles(root string, status chan<- int, trie *HybridTrie) {
 			return err
 		}
 
-		count++
-		trie.AddPath(path)
+		if !info.IsDir() {
+			count++
+			trie.AddPath(path)
+		}
 
 		select {
 		case <-ticker.C:

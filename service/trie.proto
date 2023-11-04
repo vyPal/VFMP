@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = ".";
+
+message TrieNode {
+  bool IsEndOfWord = 2;
+  map<string, TrieNode> Children = 3;
+}
+
+message HybridTrie {
+  TrieNode Root = 1;
+}

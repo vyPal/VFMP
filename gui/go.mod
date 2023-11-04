@@ -2,7 +2,10 @@ module github.com/vyPal/VFMP/gui
 
 go 1.18
 
-require github.com/wailsapp/wails/v2 v2.6.0
+require (
+	github.com/wailsapp/wails/v2 v2.6.0
+	gopkg.in/yaml.v2 v2.4.0
+)
 
 require (
 	github.com/bep/debounce v1.2.1 // indirect

@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
-	"time"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -41,6 +43,13 @@ type SearchRequest struct {
 	SearchString string `json:"search"`
 	FuzzySearch  bool   `json:"fuzzy" default:"false"`
 	MinScore     int    `json:"score" default:"0"`
+	MaxResults   int    `json:"max" default:"10"`
+}
+
+type Match struct {
+	Path    string
+	Indexes []int
+	Score   int
 }
 
 func main() {
@@ -72,47 +81,189 @@ func main() {
 	}
 	defer conn.Close()
 
-	// Set a timeout for the connection
-	conn.SetDeadline(time.Now().Add(15 * time.Second))
-
-	request := IndexRequest{
-		Dir: "/home/vypal/Dokumenty",
-	}
-
-	jsonRequest, err := json.Marshal(request)
-	if err != nil {
-		fmt.Printf("Failed to marshal request: %v\n", err)
-		return
-	}
-
-	message := IPCMessage{
-		Type: "index",
-		Data: string(jsonRequest),
-	}
-	jsonMessage, err := json.Marshal(message)
-	if err != nil {
-		fmt.Printf("Failed to marshal message: %v\n", err)
-		return
-	}
-
-	// Write the json + "\n" to the server
-	_, err = conn.Write(append(jsonMessage, '\n'))
-	if err != nil {
-		fmt.Printf("Failed to send message to server: %v\n", err)
-		return
-	}
-
-	// Read responses from the server forever
+	reader := bufio.NewReader(os.Stdin)
 	for {
-		// Read the response from the server
-		buf := make([]byte, 1024)
-		n, err := conn.Read(buf)
-		if err != nil {
-			fmt.Printf("Failed to read response from server: %v\n", err)
+		fmt.Print("Enter command: ")
+		text, _ := reader.ReadString('\n')
+		// remove the newline character
+		text = strings.Replace(text, "\n", "", -1)
+
+		// split the text into command and arguments
+		parts := strings.Split(text, " ")
+		command := parts[0]
+		args := parts[1:]
+
+		switch command {
+		case "count":
+			if len(args) != 1 {
+				fmt.Println("count command requires 1 argument")
+				continue
+			}
+			err := sendCount(args[0], conn)
+			if err != nil {
+				fmt.Println("Error sending count:", err)
+			}
+		case "index":
+			if len(args) != 1 {
+				fmt.Println("count command requires 1 argument")
+				continue
+			}
+			err := sendIndex(args[0], conn)
+			if err != nil {
+				fmt.Println("Error sending count:", err)
+			}
+		case "search":
+			if len(args) != 3 {
+				fmt.Println("count command requires 3 arguments")
+				continue
+			}
+			fuz, err := strconv.ParseBool(args[2])
+			if err != nil {
+				fmt.Println("Argument 2 is not bool")
+			}
+			err = sendSearch(args[0], args[1], fuz, conn)
+			if err != nil {
+				fmt.Println("Error sending count:", err)
+			}
+			// ... (your other cases)
+		case "exit":
 			return
+		default:
+			fmt.Println("Unknown command")
+		}
+	}
+}
+
+func sendCount(dir string, conn net.Conn) error {
+	data := CountRequest{
+		Dir: dir,
+	}
+	jsonReq, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	jsonData, err := json.Marshal(IPCMessage{
+		Type: "count",
+		Data: string(jsonReq),
+	})
+
+	_, err = conn.Write(append(jsonData, []byte("\n")...))
+	if err != nil {
+		return err
+	}
+	reader := bufio.NewReader(conn)
+	for {
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading from connection:", err)
+			return nil
 		}
 
-		// Print the response from the server
-		fmt.Printf("Response from server: %s\n", buf[:n])
+		var ipcMessage IPCMessage
+		err = json.Unmarshal([]byte(message), &ipcMessage)
+		if err != nil {
+			fmt.Println("Error unmarshalling IPCMessage:", err)
+			return nil
+		}
+
+		if ipcMessage.Type == "count.done" {
+			fmt.Println("Count done")
+			return nil
+		} else if ipcMessage.Type == "count.progress" {
+			fmt.Println("Count progress: ", ipcMessage.Data, " files")
+		}
 	}
+}
+
+func sendIndex(dir string, conn net.Conn) error {
+	data := IndexRequest{
+		Dir: dir,
+	}
+	jsonReq, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	jsonData, err := json.Marshal(IPCMessage{
+		Type: "index",
+		Data: string(jsonReq),
+	})
+
+	_, err = conn.Write(append(jsonData, []byte("\n")...))
+	if err != nil {
+		return err
+	}
+	reader := bufio.NewReader(conn)
+	for {
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading from connection:", err)
+			return nil
+		}
+
+		var ipcMessage IPCMessage
+		err = json.Unmarshal([]byte(message), &ipcMessage)
+		if err != nil {
+			fmt.Println("Error unmarshalling IPCMessage:", err)
+			return nil
+		}
+
+		if ipcMessage.Type == "index.done" {
+			fmt.Println("Index done")
+			return nil
+		} else if ipcMessage.Type == "index.progress" {
+			fmt.Println("Index progress: ", ipcMessage.Data, " files")
+		}
+	}
+}
+
+func sendSearch(path, search string, fuzzy bool, conn net.Conn) error {
+	req := SearchRequest{
+		Dir:          path,
+		SearchString: search,
+		FuzzySearch:  fuzzy,
+		MaxResults:   10,
+	}
+	jsonReq, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	jsonData, err := json.Marshal(IPCMessage{
+		Type: "search",
+		Data: string(jsonReq),
+	})
+
+	_, err = conn.Write(append(jsonData, '\n'))
+	if err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(conn)
+	message, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading from connection:", err)
+		return nil
+	}
+
+	if req.FuzzySearch {
+		var matches []Match
+		err = json.NewDecoder(strings.NewReader(strings.TrimSuffix(message, "\n"))).Decode(&matches)
+		if err != nil {
+			fmt.Println("Error decoding matches:", err)
+			return nil
+		}
+		fmt.Println("Matches:", matches)
+	} else {
+		var files []string
+		err = json.NewDecoder(strings.NewReader(strings.TrimSuffix(message, "\n"))).Decode(&files)
+		if err != nil {
+			fmt.Println("Error decoding files:", err)
+			return nil
+		}
+		fmt.Println("Files:", files)
+	}
+
+	return nil
 }

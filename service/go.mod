@@ -9,6 +9,7 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )

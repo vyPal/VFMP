@@ -11,15 +11,6 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
-type TrieNode struct {
-	IsEndOfWord bool
-	Children    map[string]*TrieNode
-}
-
-type HybridTrie struct {
-	Root TrieNode
-}
-
 func (t *HybridTrie) AddPath(path string) {
 	path = strings.ReplaceAll(path, "\\", "/") // Normalize path
 	parts := strings.Split(path, "/")          // Split path into parts
@@ -129,7 +120,33 @@ func (t *HybridTrie) printHelper(node *TrieNode, indent string) {
 	}
 }
 
+func (t *HybridTrie) Prune() {
+	t.pruneHelper(&t.Root)
+}
+
+func (t *HybridTrie) pruneHelper(node *TrieNode) {
+	for part, child := range node.Children {
+		// If the child is not the end of a word and has only one child,
+		// merge the child with its child.
+		if !child.IsEndOfWord && len(child.Children) == 1 {
+			for childPart, grandChild := range child.Children {
+				// Remove the child from the node's children.
+				delete(node.Children, part)
+				// Add the grandchild to the node's children, with the merged parts.
+				node.Children[part+childPart] = grandChild
+				// Continue pruning from the grandchild.
+				t.pruneHelper(grandChild)
+				break
+			}
+		} else {
+			// Continue pruning from the child.
+			t.pruneHelper(child)
+		}
+	}
+}
+
 func (t *HybridTrie) SaveToFile(filename string) error {
+	t.Prune()
 	file, err := os.Create(filename)
 	if err != nil {
 		return err

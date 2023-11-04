@@ -57,3 +57,11 @@
     border: none;
     background-color: rgba(255, 255, 255, 1);
 }
+
+.console {
+    background-color: black;
+    color: lime;
+    font-family: 'Courier New', monospace;
+    padding: 10px;
+    white-space: pre-wrap;
+  }
