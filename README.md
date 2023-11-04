@@ -29,5 +29,7 @@ Here is a list of commands and how to use them:
 | index | directory to index | Indexes the same files as count counts, but it saves them in a trie structure as a file on the drive |
 | search | root directory (does nothing), search string (what to search), use fuzzy search (true/false) | Searches for a file in the trie. (If fuzzy search is used, returns wierd JSON object)
 ### Using the GUI
-Build the project in the `cli/` directory, and run it.
+Build the project in the `gui/` directory, and run it.
 You will get a desktop application with a basic UI to interact with
+### Directly accessing the TCP server
+The default port is 32768 on localhost, there is no documentation. If you want to use it, read the code, I tried to make it understandable
